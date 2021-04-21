@@ -1,0 +1,57 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: secrets
+            items:
+              - key: test.json
+                path: test.json
+        - name: config-volume
+          configMap:
+            name: config
+            items:
+              - key: game.properties
+                path: game.properties
+              - key: ui.properties
+                path: ui.properties
+      containers:
+        - name: nginx
+          image: nginx:1.14.2
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: secret-volume
+              readOnly: true
+              mountPath: "/secrets"
+            - name: config-volume
+              readOnly: true
+              mountPath: "/config"
+          env:
+            - name: NORMAL_ENVIRONMENT_VARIABLE
+              value: "set"
+            - name: CONFIG_ENVIRONMENT_VARIABLE
+              valueFrom:
+                configMapKeyRef:
+                  name: config
+                  key: CONFIG_ENVIRONMENT_VARIABLE
+            - name: SECRET_ENVIRONMENT_VARIABLE
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: ENVIRONMENT_CONFIG
