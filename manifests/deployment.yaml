@@ -2,26 +2,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-deployment
+  name: deployment-with-config
   labels:
-    app: nginx
+    app: deployment-with-config
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
-      app: nginx
+      app: deployment-with-config
   template:
     metadata:
       labels:
-        app: nginx
+        app: deployment-with-config
     spec:
       volumes:
+        # Setup a volume using a secret and specifying the keys
         - name: secret-volume
           secret:
             secretName: secrets
             items:
               - key: test.json
                 path: test.json
+        # Setup a volume using a config maps and specifying the keys
         - name: config-volume
           configMap:
             name: config
@@ -36,22 +38,49 @@ spec:
           ports:
             - containerPort: 80
           volumeMounts:
+            # Use the previously specifed volume with secrets and direct it to the "/secrets" folder
             - name: secret-volume
               readOnly: true
               mountPath: "/secrets"
+            # Use the previously specifed volume with configmap and direct it to the "/config" folder
             - name: config-volume
               readOnly: true
               mountPath: "/config"
           env:
+            # Directly set the environment variables value on the container
             - name: NORMAL_ENVIRONMENT_VARIABLE
               value: "set"
+            # Pull environment Variable from Configmap "config" and key "CONFIG_ENVIRONMENT_VARIABLE"
             - name: CONFIG_ENVIRONMENT_VARIABLE
               valueFrom:
                 configMapKeyRef:
                   name: config
                   key: CONFIG_ENVIRONMENT_VARIABLE
+            # Pull environment Variable from secret "secrets" and key "SECRET_ENVIRONMENT_VARIABLE"
             - name: SECRET_ENVIRONMENT_VARIABLE
               valueFrom:
                 secretKeyRef:
                   name: secrets
-                  key: ENVIRONMENT_CONFIG
+                  key: SECRET_ENVIRONMENT_VARIABLE
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-without-config
+  labels:
+    app: deployment-without-config
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment-without-config
+  template:
+    metadata:
+      labels:
+        app: deployment-without-config
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.14.2
+          ports:
+            - containerPort: 80
